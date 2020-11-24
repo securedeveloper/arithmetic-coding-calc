@@ -1,0 +1,227 @@
+<!DOCTYPE HTML>
+<!DOCTYPE html>
+<html>
+<head>
+   <title>TCE Calculator</title>
+   <script>
+      function pushStep(text, type, color) {
+         if(color) {
+            text=`<span style="color:${color}"><strong>${text}</strong></span>`
+         }
+
+          if(type==='c') {
+            return `<div class="res-item-circle">${text}</div>`;
+         }
+
+         if(type==='r') {
+            return `<div class="res-item-rectangle" style="border-color: ${color ? color : 'black'}">${text}</div>`;
+         }
+
+         if(type==='b'){
+            return `<div class="res-item-bar" style="border-bottom-color: ${color ? color : 'black'}"><strong>${text}</strong></div>`;
+         }
+
+         return `${text}`;
+      }
+
+      function row(isEnd) {
+         if(isEnd) return '</div>';
+         return '<div class="res-row">';
+      }
+
+      function shapeS(num) {
+         return `S<sub>${num}</sub>`
+      }
+
+      function symbolVal(vals, bound, max, min) {
+         let output = '';
+         
+         const val = Number(bound);
+         max = max || 1;
+         min = min || 0;
+
+         let res;
+         let mul;
+
+         res = [min];
+         mul = max - min;
+
+         output += row();
+         output += pushStep(min, 'r');
+         for (var i = 0; i < vals.length; i++) {
+            if(i == val) {
+               output += pushStep(shapeS(i), 'b', 'red');
+            } else {
+               output += pushStep(shapeS(i), 'b');
+            }
+
+            let p = res[i] + vals[i] * mul;
+            
+            if(i+1 == val || i == val) {
+               output += pushStep(p, 'r', 'red');
+            } else {
+               output += pushStep(p, 'r');
+            }
+
+            res.push(p);
+         }
+         
+         console.log({
+            symbolVal: { vals, bound, max, mul, min, res, ans: res[val]}
+         });
+
+         return [res, res[val], output]
+      }
+
+      function calculateSequence(inputs, seq) {
+         let output = '';
+         
+         seq = seq.split(',').map(item => Number(item.trim()));
+
+         output += `<hr>calculating sequence ${seq.map(shapeS).join(',')}...`
+         
+         let min, max;
+
+         min = 0;
+         max = 0;
+
+         const res = [];
+
+         while(seq.length) {
+            const [a, b, c] = symbolVal(inputs, seq[0], max, min);
+            output += `<br><br>min: ${min}, max: ${max}, diff: ${max-min}, Seq: ${shapeS(seq[0])}<br>`
+            output += c;
+            res.push([...a, {min, max}]); 
+            min = b;
+            max = a[seq[0]+1];
+            seq.splice(0,1);
+         }
+
+         console.log({
+            calculateSequence: {
+               inputs, seq, res
+            }
+         });
+
+         return [res, output, min, max];
+      }
+
+      function lastSymbolOfSeq(vals, inp) {
+         let [val, seq] = inp.split(',').map(item => Number(item.trim()));
+         
+         let output = `<br><hr><br>Decoding Symbols for value ${val}<br>`;
+
+         let [vals2] = symbolVal(vals,0)
+
+         const res = [];
+         let ind; 
+         
+         while(seq>0) {
+            let i = 0;
+            for( ;i<vals2.length; i++) {
+               if(val < vals2[i]) {
+                  ind = i - 1;
+                  break;
+               }
+            }
+            res.push(ind);
+            
+            val = (val - vals2[ind])/vals[ind];
+
+            output += `${seq} --> ${pushStep(shapeS(ind),'','red')} --> ${val}<br>`;
+
+            seq--;
+         }
+
+         console.log({
+            lastSymbolOfSeq: {
+               val, seq, res, vals2
+            }
+         });
+
+         return [res, ind, output];
+      }
+
+      function calculateArithmeticEncoding() {
+         const input1 = document.getElementById('input1');
+         const input2 = document.getElementById('input2');
+         const input3 = document.getElementById('input3');
+         const input4 = document.getElementById('input4');
+
+         const vals = input1.value.split(',').map(item => eval(item.trim()))
+
+         const output = document.getElementById('arith-res');
+         output.innerHTML = `${output.innerHTML}<br>Inputs: <pre>${input1.value}</pre>`;
+         output.innerHTML = `${output.innerHTML}<br>Parsed: <pre>${vals.join(',')}</pre>`;
+
+         let [seq1, lowerBound, outputBound] = symbolVal(vals, input2.value);
+         
+         let [seqS, outputSeq, minS, maxS] = calculateSequence(vals, input3.value);
+
+         let [decSeq, lastSeq, outputLS] = lastSymbolOfSeq(vals, input4.value);
+
+         outputBound += row(true)+row();
+         outputBound += `<h2>Lower interval of ${shapeS(input2.value)}: ${lowerBound}</h2>`;
+         outputBound += row(true);
+         output.innerHTML = `${output.innerHTML}${outputBound}`
+         output.innerHTML = `${output.innerHTML}${outputSeq}`
+         output.innerHTML = `${output.innerHTML}<br><h2>Seq {${input3.value.split(',').map(shapeS).join(',')}}: ${minS}</h2><br>`;
+
+         output.innerHTML = `${output.innerHTML}${outputLS}`
+         output.innerHTML = `${output.innerHTML}<br><h2>Last Seq Symbol is ${shapeS(lastSeq)}</h2><br>`;
+      }
+   </script>
+   <style>
+      .res-row {
+         padding: 5px;
+         margin: 5px;
+      }
+
+      .res-item,
+      .res-item-rectangle,
+      .res-item-circle,
+      .res-item-bar {
+         display: inline-block;
+      }
+
+      .res-item-circle {
+         width: 20px;
+         height: 20px;
+         background-color: black;
+      }
+
+      .res-item-rectangle {
+         padding: 0px 5px;
+         min-width: 10px;
+         border: 1px solid #000;
+         border-bottom: none;
+      }
+
+      .res-item-bar {
+         width: 100px;
+         text-align: center;
+         border-bottom: 1px solid #000;
+      }
+
+      .result {
+         padding: 10px;
+         margin: 10px;
+         border: 1px solid #000;
+      }
+   </style>
+</head>
+<body>
+   <fieldset>
+      <legend>Arithmetic Code</legend>
+      <input id="input1" size="100" style="font-size: 1em;" placeholder="P[s0],P[s1], P[s2], P[s3], ...." />
+      <input id="input2" size="10" style="font-size: 1em;" placeholder="Lower bound of which S (0....max)" />
+      <input id="input3" size="20" style="font-size: 1em;" placeholder="Lower bound of which S (0....max)" />
+      <input id="input4" size="20" style="font-size: 1em;" placeholder="Encoded value, number of sequence" />
+      <br>
+      <button onclick="calculateArithmeticEncoding()">Calculate Arithmetic Coding</button>
+      <button onclick="document.getElementById('arith-res').innerHTML = '';">Clear output</button>
+      <div id="arith-res" class="result">
+      </div>
+   </fieldset>
+</body>
+</html>
